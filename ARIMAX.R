@@ -12,49 +12,51 @@ library('data.table')
 
 #1. Готовим данные
 #1.1 Ряд GCFC
+
 setwd('C:\\Users\\Sasha\\Documents\\MEGA\\MAGA\\Econometrics\\hw2\\data')
-gcfr <- read.csv(file = 'API_NE.GDI.FTOT.CD_DS2_en_csv_v2_10582916.csv', header = FALSE, sep = ',')
-gcfr <- gcfr[-c(1, 2, 3), ]
-colnames(gcfr) <- c("Country Name","Country Code","Indicator Name","Indicator Code",
+
+gcf_raw <- read.csv(file = 'API_NE.GDI.FTOT.CD_DS2_en_csv_v2_10582916.csv', header = FALSE, sep = ',')
+gcf_raw <- gcf_raw[-c(1, 2, 3), ]
+colnames(gcf_raw) <- c("Country Name","Country Code","Indicator Name","Indicator Code",
                   "1960","1961","1962","1963","1964","1965","1966","1967","1968","1969"
                   ,"1970","1971","1972","1973","1974","1975","1976","1977","1978","1979"
                   ,"1980","1981","1982","1983","1984","1985","1986","1987","1988","1989"
                   ,"1990","1991","1992","1993","1994","1995","1996","1997","1998","1999"
                   ,"2000","2001","2002","2003","2004","2005","2006","2007","2008","2009"
                   ,"2010","2011","2012","2013","2014","2015","2016","2017","2018")
-gcf1 <- gcfr[c(80), ]
-gcf <- gcf1[-c(1:4)]
-gcf <- gcf[,colSums(is.na(gcf)) < nrow(gcf)]
-gcf <- gcf[-c(1:5)]
-gcf <- gcf[-53]
-gcft <- t(gcf)
+gcf_raw <- gcf_raw[c(80), ]
+gcf_transposed <- gcf_raw[-c(1:4)]
+gcf_transposed <- gcf_transposed[,colSums(is.na(gcf_transposed)) < nrow(gcf_transposed)]
+gcf_transposed <- gcf_transposed[-c(1:5)]
+gcf_transposed <- gcf_transposed[-53]
+gcf <- t(gcf_transposed)
 
 #1.2 Ряд GDP
-gdpr <- read.csv(file = 'API_NY.GDP.MKTP.CD_DS2_en_csv_v2_10576830.csv', header = FALSE, sep = ',')
-gdpr <- gdpr[-c(1, 2, 3), ]
-colnames(gdpr) <- c("Country Name","Country Code","Indicator Name","Indicator Code",
+gdp_raw <- read.csv(file = 'API_NY.GDP.MKTP.CD_DS2_en_csv_v2_10576830.csv', header = FALSE, sep = ',')
+gdp_raw <- gdp_raw[-c(1, 2, 3), ]
+colnames(gdp_raw) <- c("Country Name","Country Code","Indicator Name","Indicator Code",
                     "1960","1961","1962","1963","1964","1965","1966","1967","1968","1969"
                     ,"1970","1971","1972","1973","1974","1975","1976","1977","1978","1979"
                     ,"1980","1981","1982","1983","1984","1985","1986","1987","1988","1989"
                     ,"1990","1991","1992","1993","1994","1995","1996","1997","1998","1999"
                     ,"2000","2001","2002","2003","2004","2005","2006","2007","2008","2009"
                     ,"2010","2011","2012","2013","2014","2015","2016","2017","2018")
-gdp1 <- gdpr[c(80), ]
-gdp <- gdp1[-c(1:4)]
-gdp <- gdp[, colSums(is.na(gdp)) < nrow(gdp)]
-gdp <- gdp[-c(1:5)]
-gdp <- gdp[-53]
-gdpt <- t(gdp)
+gdp_raw <- gdp_raw[c(80), ]
+gdp_transposed <- gdp_raw[-c(1:4)]
+gdp_transposed <- gdp_transposed[, colSums(is.na(gdp_transposed)) < nrow(gdp_transposed)]
+gdp_transposed <- gdp_transposed[-c(1:5)]
+gdp_transposed <- gdp_transposed[-53]
+gdp <- t(gdp_transposed)
 
 #1.3 Переводим оба ряда в time series
-gdptts <- ts(
-  gdpt,
+gdp_ts <- ts(
+  gdp,
   start = c(1965),
   end = c(2016),
   frequency = 1
 )
-gcftts <- ts(
-  gcft,
+gcf_ts <- ts(
+  gcf,
   start = c(1965),
   end = c(2016),
   frequency = 1
@@ -88,80 +90,80 @@ CPI <- ts(CPI,
           start = c(1965),
           end = c(2016),
           frequency = 1)
-gdptts <- gdptts / CPI[, 'new_index']
+gdp_ts <- gdp_ts / CPI[, 'new_index']
 
 
 WPP <- ts(WPP,
           start = c(1965),
           end = c(2016),
           frequency = 1)
-gcftts <- gcftts / WPP[, 'new_index']
+gcf_ts <- gcf_ts / WPP[, 'new_index']
 
 #Данные готовы.
+head(gcf_ts)
 
-#2. тестируем на стационарность ряды
+
+#2. Тестируем на стационарность ряды
 #2.1 ряд GCFC
-adf.test(gcftts)
-kpss.test(gcftts)
+adf.test(gcf_ts)
+kpss.test(gcf_ts)
 #adf говорит о стационарности, кпсс - обратное. Сл-но, ряд не стационарен
 
 #Посмотрим на график, видим, что ряд очевидно имеет тренд:
-plot(gcftts)
+plot(gcf_ts)
 
 #Гоним регрессию, вычитаем тренд
-linear_fit <- lm(gcftts ~ time(gcftts))
-plot(gcftts - linear_fit$fitted.values + linear_fit$fitted.values[1],
+linear_fit <- lm(gcf_ts ~ time(gcf_ts))
+plot(gcf_ts - linear_fit$fitted.values + linear_fit$fitted.values[1],
      ylab = "detrended GCF", typ = 'o')
-gcf_detr <- gcftts - linear_fit$fitted.values + linear_fit$fitted.values[1]
+gcf_detrended <- gcf_ts - linear_fit$fitted.values + linear_fit$fitted.values[1]
 
 #Еще раз проверяем на стационарность
-adf.test(gcf_detr)
-kpss.test(gcf_detr)
+adf.test(gcf_detrended)
+kpss.test(gcf_detrended)
 #Теперь оба теста говорят о стационарности => ряд стационарен
 
 
 #2.2 ряд GDP
-adf.test(gdptts)
-kpss.test(gdptts)
+adf.test(gdp_ts)
+kpss.test(gdp_ts)
 #adf говорит о стационарности, кпсс - обратное. Сл-но, ряд не стационарен
 
 #Посмотрим на график, видим, что ряд очевидно имеет тренд:
-plot(gdptts)
+plot(gdp_ts)
 
 #гоним регрессию, вычитаем тренд
-linear_fit <- lm(gdptts ~ time(gdptts))
-plot(gdptts - linear_fit$fitted.values + linear_fit$fitted.values[1],
+linear_fit <- lm(gdp_ts ~ time(gdp_ts))
+plot(gdp_ts - linear_fit$fitted.values + linear_fit$fitted.values[1],
      ylab = "detrended GDP", typ = 'o')
-gdp_detr <- gdptts - linear_fit$fitted.values + linear_fit$fitted.values[1]
+gdp_detrended <- gdp_ts - linear_fit$fitted.values + linear_fit$fitted.values[1]
 
 #Еще раз проверяем на стационарность
-adf.test(x = gdp_detr, alternative = 'stationary')
-kpss.test(gdp_detr)
+adf.test(x = gdp_detrended, alternative = 'stationary')
+kpss.test(gdp_detrended)
 #Оба теста говорят о стационарности => ряд стационарен.
 
-#3. Переходим к модели
+#3. Переходим к модели ARIMAX с разными спецификациями случайной ошибки
 
 #Взглянем на PACF и ACF:
-pacf(gcf_detr)
-acf(gcf_detr)
+pacf(gcf_detrended)
+acf(gcf_detrended)
 
-#Переобозначение переменных согласно модели:
-investment <- gcf_detr
+#Переобозначение переменных согласно акселераторной модели:
+investment <- gcf_detrended
 investment <- investment[-1]
 
 #Создаем матрицу, к-ая состоит из Y_t и Y_(t-1)
-gdp_detr_lag <- stats:::lag(gdp_detr, -1)
-product <- (ts.union(gdp_detr, gdp_detr_lag))
+gdp_detr_lag <- stats:::lag(gdp_detrended, -1)
+product <- (ts.union(gdp_detrended, gdp_detr_lag))
 product <- product[-c(1, 53),]
 
-cor(product)
 
-#тут завожу переменную, на которую делю ряды. Нужно для того, чтобы модель запустилась.
-#с большими числами она плохо работает и выдает ошибку. Если поделить то все норм.
-
+#Заводим перменную, на которую делим, чтобы понизить порядок
 denom <- 1000000000
          
-#далее делаем много моделей с разной MA() частью:
+
+#Далее делаем много моделей с разной MA() частью:
 
 m1 <- arimax(investment/denom, order = c(1, 0, 0), xreg = product/denom)
 m2 <- arimax(investment/denom, order = c(1, 0, 1), xreg = product/denom)
@@ -174,7 +176,7 @@ m8 <- arimax(investment/denom, order = c(1, 0, 7), xreg = product/denom)
 
 
 
-#тестирование на значимость и остатков
+#Тестирование на значимость и остатков
 #Смотрим на значимость полученных коэф-ов:
 
 summary(m1)
@@ -195,7 +197,8 @@ coeftest(m6) #Самый лучший по значимости на нужны�
 coeftest(m7)
 coeftest(m8)
 
-#график зависимости лмбды мю и дельты от порядка МА части
+
+#График зависимости лмбды мю и дельты от порядка МА части
 
 fun_lmb <- function(x) {
   m <- x
@@ -206,14 +209,14 @@ fun_lmb <- function(x) {
 fun_mu <- function(x) {
   m <- x
   lambda = 1 - m$coef['ar1']
-  mu = m$coef['gdp_detr'] / lambda
+  mu = m$coef['gdp_detrended'] / lambda
   mu
 }
 
 fun_dlt <- function(x) {
   m <- x
   lambda = 1 - m$coef['ar1']
-  mu = m$coef['gdp_detr'] / lambda
+  mu = m$coef['gdp_detrended'] / lambda
   delta = m$coef['gdp_detr_lag'] / (lambda * mu) + 1
   delta
 }
@@ -255,24 +258,24 @@ legend(
 
 
 
-#Смотрим на остатки у той модели, что нам больше всего понравилась:
+#Смотрим на остатки у модели (1,0,6):
 m <- m6
 acf(m$residuals, main = 'Автокорреляционная функция остатков')
-#остатки не коррелированы
+
+#Остатки не коррелированы
 
 plot(density(m$residuals), main = 'Распределение остатков модели', ylab = 'Частота')
 
 
 plot(m$residuals, main = 'Распределение остатков модели', xlab = 'Время', ylab = 'Остатки')
 
+#Распределение остатков похоже на нормальное.
 
-
-#4. Дополнительный код
-#Код показывает коэф-ты в зависимости от порядка MA() части
+#Посмотрим на коэф-ты в зависимости от порядка MA() части:
 fun_coef <- function(x) {
   m <- x
   lambda = 1 - m$coef['ar1']
-  mu = m$coef['gdp_detr'] / lambda
+  mu = m$coef['gdp_detrended'] / lambda
   delta = m$coef['gdp_detr_lag'] / (lambda * mu) + 1
   y <- c(lambda, mu, delta)
   names(y) <- c('lambda', 'mu', 'delta')
